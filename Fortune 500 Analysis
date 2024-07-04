@@ -97,7 +97,7 @@ FROM fortune_companies
 WHERE industry = 'Healthcare' OR industry = 'Technology'
 AND avg_employee_tenure>=4;
 
---For this query, I wanted to see which companies offered high amounts of time off, specifically at least 15 days of PTO and at least 9 weeks of maternity leave
+--For this query, I wanted to see which companies offered high amounts of time off, specifically at least 15 days of PTO and at least 12 weeks of maternity leave
 SELECT company_name, paid_time_off_days, maternity_leave_weeks
 FROM fortune_companies
 WHERE paid_time_off_days >= 15
