@@ -1,0 +1,75 @@
+-- For this SQL project, I was tasked with analyzing and interpreting customer data for a fictional company
+-- This project was done using SQLite Studio RDBMS
+
+-- Question #1 - How many orders were placed in January?
+
+SELECT COUNT(orderid)
+FROM BIT_DB.JanSales
+WHERE length(orderid) = 6
+AND orderid <> 'Order ID'
+;
+
+-- Note: the ficitonal data used had 'messy data' that needed to be filtered for each query
+-- Hence, you may notice that I add last 2 WHERE statements to every query for this project
+
+-- Question #2 - How many of those orders were for an iPhone?
+
+SELECT count(orderID) 
+FROM BIT_DB.JanSales 
+WHERE product = 'iPhone'
+AND length(orderid) = 6
+AND orderid <> 'Order ID'
+;
+
+-- Question #3 - Select the customer account numbers for all the orders that were placed in February.
+SELECT DISTINCT acctnum 
+FROM BIT_DB.customers
+
+INNER JOIN BIT_DB.FebSales
+ON customers.order_id = FebSales.orderID
+
+WHERE length(orderid) = 6
+AND orderid <> 'Order ID'
+;
+
+-- Question #4 - Which product was the cheapest one sold in January, and what was the price?
+SELECT DISTINCT product
+,price
+FROM BIT_DB.JanSales
+WHERE length(orderid) = 6
+AND orderid <> 'Order ID'
+ORDER BY price asc
+LIMIT 1
+;
+
+-- Question #5 - What is the total revenue for each product sold in January?
+-- Here was my first experience working with calculating company revenue with products sold, using SUM and multiplication to get my answer
+SELECT product, SUM(quantity)*price AS revenue
+FROM BIT_DB.JanSales
+WHERE length(orderid) = 6
+AND orderid <> 'Order ID'
+GROUP BY product
+;
+
+-- Question #6 - Which products were sold in February at 548 Lincoln St, Seattle, WA 98101, how many of each were sold, and what was the total revenue?
+SELECT product
+,quantity
+,SUM(quantity)*price AS revenue
+FROM BIT_DB.FebSales
+WHERE location = '548 Lincoln St, Seattle, WA 98101'
+AND length(orderID) = 6
+AND orderID <> 'Order ID'
+GROUP BY product
+;
+
+-- Question #7 - How many customers ordered more than 2 products at a time in February, and what was the average amount spent for those customers?
+SELECT count(DISTINCT cust.acctnum) AS repeat_customers,
+avg(quantity*price) AS average_spent
+FROM BIT_DB.FebSales FS
+LEFT JOIN BIT_DB.customers cust
+ON orderID = cust.order_id
+WHERE FS.quantity > 2
+AND length(orderid) = 6
+AND orderid <> 'Order ID'
+;
+
