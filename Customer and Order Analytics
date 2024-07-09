@@ -1,6 +1,8 @@
 -- For this SQL project, I was tasked with analyzing and interpreting customer data for a fictional company
 -- This project was done using SQLite Studio RDBMS
 
+-- Part 1
+
 -- Question #1 - How many orders were placed in January?
 
 SELECT COUNT(orderid)
@@ -82,3 +84,57 @@ AND length(orderID) = 6
 AND orderID <> 'Order ID'
 GROUP BY product
 ;
+
+-- Part 2
+
+-- Which locations in New York received at least 3 orders in January, and how many orders did they each receive?
+SELECT location,
+count(location) AS orders
+FROM BIT_DB.JanSales
+WHERE location LIKE '%New York%' 
+AND length(orderID) = 6
+AND orderID <> 'Order ID'
+GROUP BY location
+HAVING orders >= 3
+;
+
+-- How many of each type of headphone were sold in February?
+SELECT product
+, sum(quantity) AS amount_sold 
+FROM BIT_DB.FebSales
+WHERE product LIKE '%headphones%'
+AND length(orderID) = 6
+AND orderID <> 'Order ID'
+GROUP BY product
+;
+
+-- What was the average amount spent per account in February?
+-- (Hints: For this question, we want the average amount spent / number of accounts, not the amount spent by each account. To multiply, you can use the * symbol, and to divide, you can use the / symbol.)
+SELECT sum(price*quantity)/count(acctnum)
+FROM BIT_DB.FebSales
+INNER JOIN BIT_DB.customers cust 
+ON FebSales.orderID = cust.order_id
+WHERE length(orderID) = 6
+AND orderID <> 'Order ID'
+;
+
+-- What was the average quantity of products purchased per account in February? (Hint: just like question 3, we want the overall average, not the average for each account individually).
+SELECT sum(quantity)/count(acctnum)
+FROM BIT_DB.FebSales
+INNER JOIN BIT_DB.customers cust 
+ON FebSales.orderID = cust.order_id
+WHERE length(orderID) = 6
+AND orderID <> 'Order ID'
+;
+
+-- Which product brought in the most revenue in January and how much revenue did it bring in total?
+SELECT product
+, sum(quantity)*price AS revenue
+FROM BIT_DB.JanSales
+WHERE length(orderID) = 6
+AND orderID <> 'Order ID'
+GROUP BY product
+ORDER BY revenue desc
+LIMIT 1
+;
+
