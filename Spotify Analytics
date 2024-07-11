@@ -1,0 +1,140 @@
+# For this project, I was tasked with analyzing Spotify data in whatever way I felt interested in
+# Firstly, I downloaded Spotify data from Kaggle (specifically 2021 data) and used the code below to create a table
+
+CREATE TABLE BIT_DB.Spotifydata (
+id integer PRIMARY KEY,
+artist_name varchar NOT NULL,
+track_name varchar NOT NULL,
+track_id varchar NOT NULL,
+popularity integer NOT NULL,
+danceability decimal(4,3) NOT NULL,
+energy decimal(4,3) NOT NULL,
+song_key integer NOT NULL,
+loudness decimal(5,3) NOT NULL,
+song_mode integer NOT NULL,
+speechiness decimal(5,4) NOT NULL,
+acousticness decimal(6,5) NOT NULL,
+instrumentalness decimal(8,7) NOT NULL,
+liveness decimal(5,4) NOT NULL,
+valence decimal(4,3) NOT NULL,
+tempo decimal(6,3) NOT NULL,
+duration_ms integer NOT NULL,
+time_signature integer NOT NULL )
+
+# Afterwards I inserted the .csv file into the table 
+
+# Now I'm free to explore and play around with the data
+
+#First, I wanted to determine the average danceability of each track by artist
+SELECT artist_name, AVG(danceability)
+FROM BIT_DB.Spotifydata
+GROUP BY artist_name
+ORDER BY AVG(danceability) desc
+;
+
+
+#Then I wanted to determine the top 10 artists in the list
+SELECT artist_name, popularity
+FROM BIT_DB.Spotifydata
+ORDER BY popularity desc
+LIMIT 10
+;
+
+#I then wanted to determine what was the longest song in the list
+#The list has song duration in miliseconds, so I converted it to minutes
+SELECT artist_name
+, track_name
+, MAX(duration_ms)/1000/60 AS duration_min
+FROM BIT_DB.Spotifydata
+;
+
+#Next I found the average danceability of the 10 most popular songs
+SELECT AVG(danceability) AS avg_danceability
+FROM BIT_DB.Spotifydata
+WHERE track_name IN
+    (SELECT track_name
+    FROM BIT_DB.Spotifydata
+    ORDER BY popularity desc
+    LIMIT 10)
+;
+
+##Then I determined: What was the loudest song in the list?
+SELECT track_name
+, MIN(loudness) as loudness_db
+FROM BIT_DB.Spotifydata
+;
+
+#Since it seems that most songs have a signature of 4, I wanted to determine what songs do not have this signature
+SELECT track_name
+, artist_name
+, time_signature
+FROM BIT_DB.Spotifydata
+WHERE time_signature <> 4
+;
+
+#Then I wanted to find the average tempo of songs that have higher than average 'energy'?
+SELECT AVG(tempo)
+FROM BIT_DB.Spotifydata
+WHERE energy > (SELECT AVG(energy) FROM BIT_DB.Spotifydata)
+;
+
+#Afterwards, I wanted to determine which artists had multiple songs in the top 50 list in 2021
+SELECT artist_name
+, COUNT(id) AS songs
+FROM BIT_DB.Spotifydata
+GROUP BY artist_name
+HAVING songs > 1
+ORDER BY songs desc
+;
+
+#I also wondered how long would it take for someone to listen to all 50 songs in the list (in minutes)?
+SELECT SUM(duration_ms)/1000/60 AS duration_minutes
+FROM BIT_DB.Spotifydata
+;
+
+#I wanted to determine how many songs are considered having a 'Major' modality versus 'Minor'
+#Modality is determined by 'mode', and songs are either Major or Minor
+SELECT count(*) AS 'number_of_songs',
+CASE WHEN song_mode = 1 THEN 'Major'
+ELSE 'Minor'
+END AS modality
+FROM BIT_DB.Spotifydata
+GROUP BY modality
+;
+
+#Within the 50 songs in the database, I wanted to know which songs have the least amount of singing overall
+#In this case, songs that have above average instrumentalness AND below average speechiness
+SELECT track_name
+FROM BIT_DB.Spotifydata
+WHERE instrumentalness > (SELECT AVG(instrumentalness) FROM BIT_DB.Spotifydata)
+AND speechiness < (SELECT AVG(speechiness) FROM BIT_DB.Spotifydata)
+;
+
+#Curious, I also wanted to determine which songs that Spotify believed to be the most positive sounding 
+#Positivity is determined by higher valence scores
+SELECT track_name
+, artist_name
+FROM BIT_DB.Spotifydata
+ORDER BY valence desc
+LIMIT 10
+;
+
+#For artists that have multiple songs in the list, I wanted to determine their average positivty score?
+#Positivity is determined by Valence, as a higher valence equates to a more 'positive-sounding' song
+SELECT artist_name
+, AVG(valence)*100 AS average_positivity
+FROM BIT_DB.Spotifydata
+GROUP BY artist_name
+HAVING COUNT(id) > 1
+ORDER BY average_positivity desc
+;
+
+#Finally, I wanted to create a list of songs that should I consider for my next karaoke session
+#Personally, I wanted songs with high speechiness and acousticness are considered
+#I also want songs that in a lower key for my voice
+SELECT track_name
+FROM BIT_DB.Spotifydata
+WHERE speechiness > (SELECT AVG(speechiness) FROM BIT_DB.Spotifydata)
+AND acousticness > (SELECT AVG(acousticness) FROM BIT_DB.Spotifydata)
+AND song_key <=6
+;
