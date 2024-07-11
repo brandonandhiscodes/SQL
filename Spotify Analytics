@@ -138,3 +138,19 @@ WHERE speechiness > (SELECT AVG(speechiness) FROM BIT_DB.Spotifydata)
 AND acousticness > (SELECT AVG(acousticness) FROM BIT_DB.Spotifydata)
 AND song_key <=6
 ;
+
+#As a addtional query, I wanted to find the average popularity per artist AND if they have a score of 90 or above, they are listed as a 'Top Star'
+#This gave me some practive using CTEs and the tag function in SQL
+WITH topstars AS (
+SELECT s.artist_name AS artname,
+AVG(s.popularity) AS avgpop
+FROM Spotifydata s
+GROUP BY s.artist_name
+)
+
+SELECT artname,
+avgpop,
+'Top Star' AS tag
+FROM topstars
+WHERE avgpop>=90
+;
