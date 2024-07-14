@@ -1,0 +1,249 @@
+# For this Project, I was given a fictional company database called 'Chinook' 
+# This company sold music tracks, and the database contained information of their customers, employees, invoices, and music track information (like genre, artist, playlists, etc.)
+# I was tasked with performing a series of data analysis queries using the database, as seen below
+
+# List all Customers (their full names, customer ID, and country) who are not in the US
+SELECT FirstName
+, Lastname
+, CustomerID
+, Country
+FROM chinook.customers
+WHERE country <> 'USA'
+;
+
+# List only the Customers from Brazil.
+SELECT FirstName
+,Lastname
+,CustomerID
+,Country
+FROM chinook.customers
+WHERE country = 'Brazil'
+;
+
+# List the Invoices of customers who are from Brazil. 
+# The resulting table should show the customer's full name, Invoice ID, Date of the invoice, and billing country.
+
+SELECT FirstName
+,Lastname
+,Invoiceid
+,InvoiceDate
+,BillingCountry
+FROM chinook.invoices
+LEFT JOIN chinook.customers
+ON invoices.CustomerID = customers.CustomerId
+WHERE BillingCountry = 'Brazil'
+;
+
+# Who are the Employees that are Sales Agents?
+SELECT EmployeeID
+,FirstName
+,LastName
+,Title
+,Phone
+,Fax
+,Email 
+FROM chinook.employees
+WHERE Title = 'Sales Support Agent';
+
+# Find a unique/distinct list of billing countries from the Invoice table.
+SELECT DISTINCT BillingCountry
+FROM chinook.invoices
+ORDER BY BillingCountry
+;
+
+# Provide a query that shows the invoices associated with each sales agent. 
+# The resulting table should include the Sales Agent's full name.
+SELECT FirstName
+,LastName
+,InvoiceID
+FROM chinook.employees
+LEFT JOIN chinook.customers
+ON employees.EmployeeId = customers.SupportRepId
+INNER JOIN chinook.invoices
+ON customers.CustomerId = invoices.CustomerId
+;
+
+# Show the Invoice Total, Customer name, Country, and Sales Agent name for all invoices and customers.
+SELECT Total
+,customers.FirstName CustFirstName
+,customers.LastName CustLastName
+,BillingCountry
+,employees.FirstName EmployeeFirstName
+,employees.LastName EmployeeLastName
+ FROM chinook.invoices
+ INNER JOIN chinook.customers
+ ON invoices.CustomerId = customers.CustomerId
+ LEFT JOIN chinook.employees
+ ON customers.SupportRepId = employees.EmployeeId;
+ 
+# In 2009, how many invoices were made?
+
+--  In this case, the column 'InvoiceDate' was actually stored as text
+SELECT typeof(InvoiceDate) FROM chinook.invoices;
+
+
+SELECT count(InvoiceID) invoices_made
+FROM chinook.invoices
+WHERE InvoiceDate LIKE '2009%'
+;
+
+# What was the total revenue made in 2009?
+SELECT ROUND(sum(Total),2) total_sales
+FROM chinook.invoices
+WHERE InvoiceDate LIKE '2009%'
+;
+
+# For each invoice line ID, list what track was purchased too
+SELECT tracks.Name track_name
+, invoice_items.InvoiceId
+FROM chinook.tracks
+LEFT JOIN chinook.invoice_items
+ON tracks.TrackId = invoice_items.TrackId
+WHERE InvoiceID <> ''
+;
+
+# In addition to the previous query, add the artist name as well
+SELECT tracks.Name track_name
+, artists.Name artist_name
+, invoice_items.InvoiceId
+FROM chinook.tracks
+LEFT JOIN chinook.invoice_items
+ON tracks.TrackId = invoice_items.TrackId
+LEFT JOIN chinook.albums
+ON tracks.AlbumId = albums.AlbumId
+LEFT JOIN chinook.artists
+ON albums.ArtistId = artists.ArtistId
+WHERE InvoiceID <> ''
+;
+
+# List all tracks, and include genre, album, and media type they include
+SELECT tracks.Name track_name
+,albums.Title album_title
+,media_types.Name mediatype
+,genres.Name genre_name
+FROM chinook.tracks
+LEFT JOIN chinook.albums
+ON tracks.AlbumId = albums.AlbumId
+LEFT JOIN chinook.media_types
+ON tracks.MediaTypeId = media_types.MediaTypeId
+LEFT JOIN chinook.genres
+ON tracks.GenreId = genres.GenreId
+;
+
+# How much did each sales agent make in total?
+SELECT employees.FirstName EmployeeFirstName
+,employees.LastName EmployeeLastName
+,ROUND(sum(Total),2) TotalSales
+ FROM chinook.invoices
+ INNER JOIN chinook.customers
+ ON invoices.CustomerId = customers.CustomerId
+ LEFT JOIN chinook.employees
+ ON customers.SupportRepId = employees.EmployeeId
+ GROUP BY EmployeeID;
+ 
+# Who was the top performing agent in 2009?
+SELECT employees.FirstName EmployeeFirstName
+,employees.LastName EmployeeLastName
+,ROUND(sum(Total),2) TotalSales
+ FROM chinook.invoices
+ INNER JOIN chinook.customers
+ ON invoices.CustomerId = customers.CustomerId
+ LEFT JOIN chinook.employees
+ ON customers.SupportRepId = employees.EmployeeId
+ WHERE InvoiceDate LIKE '2009%'
+ GROUP BY EmployeeID
+ ORDER BY TotalSales desc
+ LIMIT 1;
+ 
+# What were the top 10 most sold tracks? 
+# I want to include the top tracks in descending order, alongside their album, genre, the artist's name, and the amount of times it was sold
+
+SELECT tracks.Name track_name
+,albums.Title album_title
+,artists.Name
+,genres.Name genre_name
+,count(invoice_items.InvoiceLineID) track_sales
+FROM chinook.tracks
+
+LEFT JOIN chinook.albums
+ON tracks.AlbumId = albums.AlbumId
+
+LEFT JOIN chinook.genres
+ON tracks.GenreId = genres.GenreId
+
+LEFT JOIN chinook.invoice_items
+ON tracks.TrackId = invoice_items.TrackId
+
+LEFT JOIN chinook.artists
+ON albums.ArtistId = artists.ArtistId
+
+GROUP BY track_name
+ORDER BY track_sales desc
+LIMIT 10
+;
+
+# I want to see how many tracks are in each playlist, what the most prevalent genre is per playlist, and assign each playlist a 'size tag' depending on the amount of songs
+WITH counts AS (
+SELECT playlists.Name playlist_name
+,COUNT(pt.trackid) tracks_used
+FROM playlist_track pt
+LEFT JOIN playlists
+ON pt.playlistid = playlists.PlaylistId
+LEFT JOIN tracks
+ON pt.Trackid = tracks.Trackid
+GROUP BY playlist_name
+)
+
+SELECT *
+,CASE WHEN tracks_used > 2000 THEN 'Huge Playlist'
+WHEN tracks_used BETWEEN 1000 AND 1999 THEN 'Big Playlist'
+WHEN tracks_used BETWEEN 50 AND 999 THEN 'Medium Playlist'
+ELSE 'Tiny playlist'
+END AS 'Playlist Size'
+FROM counts
+ORDER BY tracks_used desc
+;
+
+# I wanted to list each country in descending order by how much revenue was made for the company
+# I also wanted to see what was the top performing genre of each country too
+
+WITH revenue_per_genre AS (
+SELECT customers.Country
+,genres.Name AS genre_name
+,SUM(invoice_items.UnitPrice*invoice_items.Quantity) AS revenue
+
+FROM customers
+LEFT JOIN invoices
+ON customers.CustomerId = invoices.CustomerId
+LEFT JOIN invoice_items
+ON invoices.InvoiceId = invoice_items.InvoiceId
+LEFT JOIN tracks
+ON invoice_items.TrackId = tracks.TrackId
+LEFT JOIN genres
+ON tracks.GenreId = genres.GenreId
+
+GROUP BY customers.Country
+,genres.Name
+),
+
+country_top_genre AS (
+SELECT Country
+,genre_name
+,Revenue
+,RANK() OVER (PARTITION BY Country ORDER BY Revenue DESC) AS rank
+FROM revenue_per_genre
+)
+
+SELECT country_top_genre.Country
+,ROUND(SUM(revenue_per_genre.Revenue),2) AS total_revenue
+,country_top_genre.genre_name AS top_genre
+FROM country_top_genre
+
+LEFT JOIN revenue_per_genre
+ON country_top_genre.Country = revenue_per_genre.Country
+
+WHERE country_top_genre.rank = 1
+GROUP BY country_top_genre.Country
+,country_top_genre.genre_name
+ORDER BY total_revenue DESC
+;
